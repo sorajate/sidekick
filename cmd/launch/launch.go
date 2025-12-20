@@ -25,6 +25,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/client"
@@ -216,6 +217,7 @@ func stage5(sshClient *ssh.Client, appName string, appPort string, appDomain str
 		Url:       appDomain,
 		CreatedAt: time.Now().Format(time.UnixDate),
 		Env:       envConfig,
+		Server:    server.Name,
 	}
 	ymlData, _ := yaml.Marshal(&sidekickAppConfig)
 	os.WriteFile("./sidekick.yml", ymlData, 0644)
@@ -233,7 +235,30 @@ var LaunchCmd = &cobra.Command{
 		if err != nil {
 			render.GetLogger(log.Options{Prefix: "Sidekick Config"}).Fatalf("%s", err)
 		}
-		sidekickServer, err := config.FindServerByContext(config.CurrentContext)
+		var selectedCtx utils.SidekickContext
+		options := make([]huh.Option[utils.SidekickContext], 0, len(config.Contexts))
+		for _, c := range config.Contexts {
+			server, err := config.FindServer(c.Server)
+			if err != nil {
+				render.GetLogger(log.Options{Prefix: "Sidekick Config"}).Fatalf("%s", err)
+			}
+			options = append(options, huh.NewOption(fmt.Sprintf("%s (%s)", server.Name, server.Address), c))
+		}
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[utils.SidekickContext]().
+					Title("Select a VPS").
+					Options(options...).
+					Value(&selectedCtx),
+			),
+		)
+		err = form.Run()
+
+		if err != nil {
+			render.GetLogger(log.Options{Prefix: "Context Selection"}).Fatalf("%s", err)
+		}
+
+		sidekickServer, err := config.FindServerByContext(selectedCtx.Name)
 		if err != nil {
 			render.GetLogger(log.Options{Prefix: "Sidekick Config"}).Fatalf("%s", err)
 		}

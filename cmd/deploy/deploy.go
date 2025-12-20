@@ -36,15 +36,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func prelude(server *utils.SidekickServer) utils.SidekickAppConfig {
+func prelude(config *utils.SidekickConfig) (utils.SidekickAppConfig, utils.SidekickServer) {
 	if !utils.FileExists("./sidekick.yml") {
 		pterm.Error.Println(`Sidekick config not found in current directory Run sidekick launch`)
-		os.Exit(1)
-	}
-	if server.SecretKey == "" {
-		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Error("Recent changes to how Sidekick handles secrets prevents you from launcing a new application.")
-		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("To fix this, run `Sidekick init` with the same server address you have now.")
-		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("Learn more at www.sidekickdeploy.com/docs/design/encryption")
 		os.Exit(1)
 	}
 
@@ -53,19 +47,42 @@ func prelude(server *utils.SidekickServer) utils.SidekickAppConfig {
 		panic(loadError)
 	}
 
-	ips, err := net.LookupIP(appConfig.Url)
-	if err != nil {
-		panic(err)
+	// Older version of app config does not have server name
+	// We will try to match the first server with IP matching the url
+	if appConfig.Server == "" {
+		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("An older version of sidekick.yml is found. Attempting to match a server from url...")
+		ips, err := net.LookupIP(appConfig.Url)
+		if err != nil {
+			render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Fatal(err)
+		}
+		for _, server := range config.Servers {
+			if slices.ContainsFunc(ips, func(ip net.IP) bool {
+				return ip.String() == server.Address
+			}) {
+				appConfig.Server = server.Name
+				render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("Found server", "name", server.Name, "IP", server.Address)
+				break
+			}
+		}
 	}
 
-	if !slices.ContainsFunc(ips, func(ip net.IP) bool {
-		return ip.String() == server.Address
-	}) {
-		pterm.Error.Println("The app was deployed to a different server than the selected server. Sidekick currently doesn't support deploying the same app to multiple servers.")
+	if appConfig.Server == "" {
+		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Fatal("Unable to find a server that this app was deployed.")
+	}
+
+	server, err := config.FindServer(appConfig.Server)
+	if err != nil {
+		render.GetLogger(teaLog.Options{Prefix: "Sidekick Config"}).Fatal(err)
+	}
+
+	if server.SecretKey == "" {
+		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Error("Recent changes to how Sidekick handles secrets prevents you from launcing a new application.")
+		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("To fix this, run `Sidekick init` with the same server address you have now.")
+		render.GetLogger(teaLog.Options{Prefix: "Backward Compat"}).Info("Learn more at www.sidekickdeploy.com/docs/design/encryption")
 		os.Exit(1)
 	}
 
-	return appConfig
+	return appConfig, server
 }
 
 func stage1Login(server *utils.SidekickServer) (*ssh.Client, error) {
@@ -198,11 +215,7 @@ It assumes that your VPS is already configured and that your application is read
 		if err != nil {
 			render.GetLogger(log.Options{Prefix: "Sidekick Config"}).Fatalf("%s", err)
 		}
-		sidekickServer, err := config.FindServerByContext(config.CurrentContext)
-		if err != nil {
-			render.GetLogger(log.Options{Prefix: "Sidekick Config"}).Fatalf("%s", err)
-		}
-		appConfig := prelude(&sidekickServer)
+		appConfig, sidekickServer := prelude(config)
 
 		cmdStages := []render.Stage{
 			render.MakeStage("Validating connection with VPS", "VPS is reachable", false),
@@ -214,7 +227,7 @@ It assumes that your VPS is already configured and that your application is read
 		}
 		p := tea.NewProgram(render.TuiModel{
 			Stages:      cmdStages,
-			BannerMsg:   "Deploying a new env of your app 😎",
+			BannerMsg:   fmt.Sprintf("Deploying a new env of your app to server %s (%s) 😎", sidekickServer.Name, sidekickServer.Address),
 			ActiveIndex: 0,
 			Quitting:    false,
 			AllDone:     false,

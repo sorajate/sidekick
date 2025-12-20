@@ -27,12 +27,12 @@ import (
 )
 
 var ConfigCmd = &cobra.Command{
-	Use: "config",
+	Use:   "config",
 	Short: "Subcommands for modifying sidekick config",
 }
 
 var currentContextCmd = &cobra.Command{
-	Use: "current",
+	Use:   "current",
 	Short: "Get the current context from sidekick config",
 	Run: func(cmd *cobra.Command, args []string) {
 		config, err := utils.GetSidekickConfigFromCmdContext(cmd)
@@ -44,9 +44,9 @@ var currentContextCmd = &cobra.Command{
 }
 
 var useContextCmd = &cobra.Command{
-	Use: "use [context-name]",
+	Use:   "use [context-name]",
 	Short: "Switch the current context in sidekick config",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		config, err := utils.GetSidekickConfigFromCmdContext(cmd)
 		if err != nil {
@@ -60,7 +60,7 @@ var useContextCmd = &cobra.Command{
 }
 
 var migrateCmd = &cobra.Command{
-	Use: "migrate",
+	Use:   "migrate",
 	Short: "Migrate the old sidekick config to the new config",
 	Run: func(cmd *cobra.Command, args []string) {
 		var serverConfig utils.SidekickServer
@@ -75,13 +75,13 @@ var migrateCmd = &cobra.Command{
 
 		serverConfig.Name = "default"
 		defaultContext := utils.SidekickContext{
-			Name: "default",
+			Name:   "default",
 			Server: "default",
 		}
 		newConfig := utils.SidekickConfig{
-			Version: "1",
-			Servers: []utils.SidekickServer { serverConfig },
-			Contexts: []utils.SidekickContext { defaultContext },
+			Version:        "1",
+			Servers:        []utils.SidekickServer{serverConfig},
+			Contexts:       []utils.SidekickContext{defaultContext},
 			CurrentContext: defaultContext.Name,
 		}
 		err = newConfig.Print()

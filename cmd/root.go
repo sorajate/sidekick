@@ -83,10 +83,10 @@ func initConfig(cmd *cobra.Command) {
 			pterm.Fatal.Println("Sidekick config not found - Run sidekick init")
 		}
 		config = utils.SidekickConfig{
-			Version: "1",
+			Version:        "1",
 			CurrentContext: "",
-			Contexts: []utils.SidekickContext{},
-			Servers: []utils.SidekickServer{},
+			Contexts:       []utils.SidekickContext{},
+			Servers:        []utils.SidekickServer{},
 		}
 	} else {
 		err := yaml.Unmarshal(content, &config)

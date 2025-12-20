@@ -195,13 +195,13 @@ var InitCmd = &cobra.Command{
 		sidekickServer, err := config.FindServer(name)
 		if err != nil {
 			sidekickServer = utils.SidekickServer{
-				Name: name,
-				Address: server,
+				Name:      name,
+				Address:   server,
 				CertEmail: certEmail,
 			}
 		}
 
-		if sidekickServer.Name == name && sidekickServer.Address != server && sidekickServer.PublicKey != ""  && !skipPromptsFlag {
+		if sidekickServer.Name == name && sidekickServer.Address != server && sidekickServer.PublicKey != "" && !skipPromptsFlag {
 			confirm := render.GenerateTextQuestion(fmt.Sprintf("The server '%s' was previously setup with Sidekick using a different address. Would you like to overwrite the settings? (y/n)", sidekickServer.Name), "n", "")
 			if strings.ToLower(confirm) != "y" {
 				fmt.Println("\nYou can use a different server name to complete the setup")
@@ -280,7 +280,7 @@ var InitCmd = &cobra.Command{
 			}
 
 			config.AddOrReplaceServer(sidekickServer)
-			newContext := utils.SidekickContext { Name: sidekickServer.Name, Server: sidekickServer.Name }
+			newContext := utils.SidekickContext{Name: sidekickServer.Name, Server: sidekickServer.Name}
 			config.AddOrReplaceContext(newContext)
 			config.CurrentContext = newContext.Name
 

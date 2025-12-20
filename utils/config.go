@@ -86,7 +86,7 @@ func (c *SidekickConfig) AddOrReplaceContext(ctx SidekickContext) {
 		}
 	}
 
-	if idx == - 1 {
+	if idx == -1 {
 		c.Contexts = append(c.Contexts, ctx)
 	} else {
 		c.Contexts[idx] = ctx
@@ -102,7 +102,7 @@ func (c *SidekickConfig) AddOrReplaceServer(s SidekickServer) {
 		}
 	}
 
-	if idx == - 1 {
+	if idx == -1 {
 		c.Servers = append(c.Servers, s)
 	} else {
 		c.Servers[idx] = s
